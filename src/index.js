@@ -29,13 +29,13 @@ function applyDependencyOperations(operations, deps) {
   operations.change.forEach(dep => deps[dep.name] = dep.version);
 }
 
-function mergeDependencyChanges(source, ours, theirs) {
+function mergeDependencyChanges(source, ours, theirs, finalDependencyKeys) {
   let mergeOperations = ThreeWayMerger.merge({ source, ours, theirs });
 
   // get a fresh copy so we don't mutate the passed in arg
   let result = clone(ours);
 
-  dependencyKeys.forEach(dependencyKey => {
+  finalDependencyKeys.forEach(dependencyKey => {
     // we could be missing the key and need to add to it
     if (!result[dependencyKey]) {
       result[dependencyKey] = {};
@@ -65,16 +65,17 @@ function stringify(value) {
   return JSON.stringify(value, null, 2).replace(/\n/g, EOL) + EOL;
 }
 
-module.exports = function mergePackageJson(_currentPackageJson, _fromPackageJson, _toPackageJson) {
+module.exports = function mergePackageJson(_currentPackageJson, _fromPackageJson, _toPackageJson, _dependencyKeys) {
   let currentPackageJson = JSON.parse(_currentPackageJson);
   let fromPackageJson = JSON.parse(_fromPackageJson);
   let toPackageJson = JSON.parse(_toPackageJson);
+  let finalDependencyKeys = _dependencyKeys ? _dependencyKeys : dependencyKeys;
 
-  let mergedDependenciesPackageJson = mergeDependencyChanges(fromPackageJson, currentPackageJson, toPackageJson);
+  let mergedDependenciesPackageJson = mergeDependencyChanges(fromPackageJson, currentPackageJson, toPackageJson, finalDependencyKeys);
   let mergedOtherPackageJson = mergeNonDependencyChanges(fromPackageJson, currentPackageJson, toPackageJson);
 
   let finalMergedPackageJson = clone(mergedOtherPackageJson);
-  dependencyKeys.forEach(dependencyKey => {
+  finalDependencyKeys.forEach(dependencyKey => {
     finalMergedPackageJson[dependencyKey] = mergedDependenciesPackageJson[dependencyKey];
   });
 
